@@ -1,7 +1,7 @@
 # Fully Advesarial Mosaics (FAMOS)
 
 Pytorch implementation of the paper "Copy the Old or Paint Anew? An Adversarial Framework
-for (non-) Parametric Image Stylization" available at .
+for (non-) Parametric Image Stylization" available at http://arxiv.org/abs/1811.09236.
 
 This code allows to generate image stylisation using an adversarial approach combining parametric and non-parametric elements.
 Tested to work on Ubuntu 16.04, Pytorch 0.4, Python 3.6. Nvidia GPU p100. It is recommended to have a GPU with 12, 16GB, or more of VRAM.
