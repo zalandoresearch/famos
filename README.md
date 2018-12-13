@@ -19,6 +19,18 @@ There are 5 groups of parameter types:
 - parameters of the stochastic noise -- see [PSGAN](https://arxiv.org/abs/1705.06566)
 
 
+##Update: new functionality for texture synthesis
+Due to interest in a new Pytorch implementation of our last paper "Texture Synthesis with Spatial Generative Adversarial Networks" ([PSGAN](https://arxiv.org/abs/1705.06566)) we added a script reimplementing it in the current repository. It shares many components with the texture mosaic stylization approach, but without the content image and loss, the generator is conditioned only on noise.
+Example call for texture synthesis:
+
+```
+python PSGAN.py --texturePath=samples/milano/ --ngf=120 --zLoc=50 --ndf=120 --nDep=5 --nDepD=5 --batchSize=16
+```
+
+In general, texture synthesis is much faster than the other methods in this repository, so feel free to add more channels and increase th batchsize.
+For more details and inspiration how to play with texture synthesis see our [old repository](https://github.com/zalandoresearch/psgan) with Lasagne code for PSGAN. 
+
+
 ## Usage: parametric convolutional adversarial mosaic
 We provide scripts that have a main loop in which we (i) train an adversarial stylization model and (ii) save images (inference mode). If you need it, you can easily modify the code to save a trained model and load it later to do inference on many other images, see comments at the end of `mosaicGAN.py`.
 
