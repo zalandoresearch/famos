@@ -6,7 +6,7 @@ parser = argparse.ArgumentParser()
 
 ##data path and loading parameters
 parser.add_argument('--texturePath', required=True, help='path to texture image folder')
-parser.add_argument('--contentPath', required=True, help='path to content image folder')
+parser.add_argument('--contentPath', default='', help='path to content image folder')
 parser.add_argument('--mirror', type=bool, default=False,help='augment style image distribution for mirroring')
 parser.add_argument('--contentScale', type=float, default=1.0,help='scale content images')
 parser.add_argument('--textureScale', type=float, default=1.0,help='scale texture images')

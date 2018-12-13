@@ -64,6 +64,36 @@ class Discriminator(nn.Module):
         return output[:,:,1:-1,1:-1]
 
 ##################################################
+class NetG(nn.Module):
+    # @param ngf is channels of first layer, doubled up after every stride operation, or halved after upsampling
+    # @param nDep is depth, both of decoder and of encoder
+    # @param nz is dimensionality of stochastic noise we add
+    def __init__(self, ngf, nDep, nz,nc=3):
+        super(NetG, self).__init__()
+
+        of = nz
+        layers = []
+        for i in range(nDep):
+
+            if i == nDep - 1:
+                nf = nc
+            else:
+                nf = ngf * 2 ** (nDep - 2 - i)
+            for j in range(opt.nBlocks):
+                layers += [ResnetBlock(of, padding_type="zero", norm_layer=norma, use_dropout=False, use_bias=True)]
+
+            layers += [nn.Upsample(scale_factor=2, mode='nearest')]  # nearest is default anyway
+            layers += [nn.Conv2d(of, nf, 5, 1, 2)]
+            if i == nDep - 1:
+                layers += [nn.Tanh()]
+            else:
+                layers += [norma(nf)]
+                layers += [nn.ReLU(True)]
+            of = nf
+        self.G = nn.Sequential(*layers)
+
+    def forward(self, input):
+        return self.G(input)
 
 class NetUskip(nn.Module):
     # @param nc is output channels
@@ -75,7 +105,7 @@ class NetUskip(nn.Module):
     # @param bCopyIn copies the input channels at every decoder level -- special skip connections
     # @param bSkip turns skip connections btw encoder and decoder off
     # @param bTanh turns nonlinearity on and off
-   def __init__(self, ngf, nDep, nz=0, Ubottleneck=-1, nc=3, ncIn=None, bSkip=True, bTanh =True, lessD=0, bCopyIn=False):
+   def __init__(self, ngf, nDep, nz=0, Ubottleneck=-1, nc=3, ncIn=None, bSkip=True, bTanh =True, bCopyIn=False):
         super(NetUskip, self).__init__()
         self.nDep = nDep
         self.eblocks=nn.ModuleList()
@@ -114,7 +144,7 @@ class NetUskip(nn.Module):
 
         ##first nDep layers
         of = nz + Ubottleneck - bfirstNoise * nz
-        for i in range(nDep+lessD):
+        for i in range(nDep):
             layers = []
             if i==nDep-1:
                 nf=nc
@@ -130,7 +160,7 @@ class NetUskip(nn.Module):
                 layers += [ResnetBlock(of, padding_type="zero", norm_layer=norma, use_dropout=False, use_bias=True)]
 
             layers +=[nn.Upsample(scale_factor=2, mode='nearest')]#nearest is default anyway
-            layers+=[nn.Conv2d(of,nf, 4+1, 1, 2)]
+            layers+=[nn.Conv2d(of,nf, 5, 1, 2)]
             if i == nDep-1:
                 if bTanh:
                     layers+=[nn.Tanh()]

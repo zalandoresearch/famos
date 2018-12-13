@@ -232,10 +232,11 @@ if opt.zPeriodic:
     # fastest wave 1.5pi step -- full cycle in 0.66 steps
     def initWave(nPeriodic):
         buf = []
-        for i in range(nPeriodic // 4):
+        for i in range(nPeriodic // 4+1):
             v = 0.5 + i / float(nPeriodic//4-1)
             buf += [0, v, v, 0]
             buf += [0, -v, v, 0]  # #so from other quadrants as well..
+        buf=buf[:2*nPeriodic]
         awave = np.array(buf, dtype=np.float32) * np.pi
         awave = torch.FloatTensor(awave).unsqueeze(-1).unsqueeze(-1).unsqueeze(0)
         return awave
@@ -244,8 +245,18 @@ if opt.zPeriodic:
     class Waver(nn.Module):
         def __init__(self):
             super(Waver, self).__init__()
-            self.learnedWN = nn.Parameter(torch.zeros(opt.zPeriodic * 2).uniform_(-1, 1).unsqueeze(-1).unsqueeze(-1).unsqueeze(0) * 0.2)
-        def forward(self, c):
+            if opt.zGL >0:
+                K=20
+                layers=[nn.Conv2d(opt.zGL, K, 1)]
+                layers +=[nn.ReLU(True)]
+                layers += [nn.Conv2d(K,2*opt.zPeriodic, 1)]
+                self.learnedWN =  nn.Sequential(*layers)
+            else:##static
+                self.learnedWN = nn.Parameter(torch.zeros(opt.zPeriodic * 2).uniform_(-1, 1).unsqueeze(-1).unsqueeze(-1).unsqueeze(0) * 0.2)
+        def forward(self, c,GLZ=None):
+            if opt.zGL > 0:
+                return (waveNumbers + self.learnedWN(GLZ)) * c
+
             return (waveNumbers + self.learnedWN) * c
     learnedWN = Waver()
 else:
@@ -263,7 +274,7 @@ def setNoise(noise):
         c = c.repeat(noise.shape[0], opt.zPeriodic, 1, 1)
         c = c.to(device)
         # #now c has canonic coordinate system -- multiply by wave numbers
-        raw = learnedWN(c)
+        raw = learnedWN(c,noise[:, :opt.zGL])
         #random offset
         offset = (noise[:, -opt.zPeriodic:, :1, :1] * 1.0).uniform_(-1, 1) * 6.28
         offset = offset.repeat(1, 1, noise.shape[2], noise.shape[3])
