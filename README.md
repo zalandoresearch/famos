@@ -19,8 +19,8 @@ There are 5 groups of parameter types:
 - parameters of the stochastic noise -- see [PSGAN](https://arxiv.org/abs/1705.06566)
 
 
-##Update: new functionality for texture synthesis
-Due to interest in a new Pytorch implementation of our last paper "Texture Synthesis with Spatial Generative Adversarial Networks" ([PSGAN](https://arxiv.org/abs/1705.06566)) we added a script reimplementing it in the current repository. It shares many components with the texture mosaic stylization approach, but without the content image and loss, the generator is conditioned only on noise.
+## Update: new functionality for texture synthesis
+Due to interest in a new Pytorch implementation of our last paper "Texture Synthesis with Spatial Generative Adversarial Networks" ([PSGAN](https://arxiv.org/abs/1705.06566)) we added a script reimplementing it in the current repository. It shares many components with the texture mosaic stylization approach. A difference: PSGAN has no content image and loss, the generator is conditioned only on noise.
 Example call for texture synthesis:
 
 ```
