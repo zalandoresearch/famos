@@ -233,7 +233,7 @@ if opt.zPeriodic:
     def initWave(nPeriodic):
         buf = []
         for i in range(nPeriodic // 4+1):
-            v = 0.5 + i / float(nPeriodic//4-1)
+            v = 0.5 + i / float(nPeriodic//4+1e-10)
             buf += [0, v, v, 0]
             buf += [0, -v, v, 0]  # #so from other quadrants as well..
         buf=buf[:2*nPeriodic]
