@@ -192,7 +192,7 @@ for epoch in range(opt.niter):
                     print("test image size", im.shape)
                     fixnoise2 = torch.FloatTensor(1, nz, im.shape[2] // 2 ** nDep, im.shape[3] // 2 ** nDep)
                     fixnoise2 = fixnoise2.to(device)
-                    noise=setNoise(fixnoise2)
+                    fixnoise2=setNoise(fixnoise2)
                     fakebig,_,_,_= splitW(im, fixnoise2, None, ganGeneration)
                     vutils.save_image(fakebig, '%s/mosaicTransfer_epoch_%03d_%s.jpg' % (opt.outputFolder, epoch, desc), normalize=True)
                 except Exception as e:
