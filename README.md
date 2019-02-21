@@ -20,6 +20,9 @@ There are 5 groups of parameter types:
 
 ## Update Febr. 2019: video frame-by-frame rendering supported
 mosaicGAN.py can now render a whole folder of test images with the trained model.
+Example videos: lion video with [Münich](https://www.youtube.com/watch?v=pB08N6Vq-hM&feature=youtu.be) and [Berlin](https://www.youtube.com/watch?v=Nl2fwIQk4u4&feature=youtu.be)
+
+
 Just specify
 ```
 python mosaicGAN.py --texturePath=samples/milano/ --contentPath=myFolder/ --testImage=myFolder/ 
