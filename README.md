@@ -18,7 +18,7 @@ There are 5 groups of parameter types:
 - optimization parameters 
 - parameters of the stochastic noise -- see [PSGAN](https://arxiv.org/abs/1705.06566)
 
-##Update Febr. 2019: video frame-by-frame rendering supported
+## Update Febr. 2019: video frame-by-frame rendering supported
 mosaicGAN.py can now render a whole folder of test images with the trained model.
 Just specify
 ```
