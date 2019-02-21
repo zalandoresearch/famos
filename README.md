@@ -18,8 +18,18 @@ There are 5 groups of parameter types:
 - optimization parameters 
 - parameters of the stochastic noise -- see [PSGAN](https://arxiv.org/abs/1705.06566)
 
+##Update Febr. 2019: video frame-by-frame rendering supported
+mosaicGAN.py can now render a whole folder of test images with the trained model.
+Just specify
+```
+python mosaicGAN.py --texturePath=samples/milano/ --contentPath=myFolder/ --testImage=myFolder/ 
+```
 
-## Update: new functionality for texture synthesis
+with your myFolder and all images from that folder will be rendered by the generator of the GAN. Best to use the same test folder as content folder for training.
+To use in a video editing pipeline, save all video frames as images with a tool like AVIDEMUX, train FAMOS and save rendered frames, assemble again as video. 
+Note: this my take some time to render thousands of images, you can edit in the code VIDEO_SAVE_FREQ to render the test image folder less frequently.
+
+## Update Jan. 2019: new functionality for texture synthesis
 Due to interest in a new Pytorch implementation of our last paper "Texture Synthesis with Spatial Generative Adversarial Networks" ([PSGAN](https://arxiv.org/abs/1705.06566)) we added a script reimplementing it in the current repository. It shares many components with the texture mosaic stylization approach. A difference: PSGAN has no content image and loss, the generator is conditioned only on noise.
 Example call for texture synthesis:
 

@@ -8,7 +8,7 @@ import torchvision.transforms as transforms
 import torchvision.utils as vutils
 import numpy as np
 import sys
-from network import weights_init,NetUskip, Discriminator,calc_gradient_penalty
+from network import weights_init,NetED, Discriminator,calc_gradient_penalty
 from prepareTemplates import getTemplates,getImage
 
 from config import opt,bMirror,nz,nDep,criterion
@@ -58,7 +58,7 @@ print("fixed variables",fixnoise.data.shape,targetMosaic.data.shape)
 netD = Discriminator(ndf, opt.nDepD, bSigm=not opt.LS and not opt.WGAN)
 
 ##################################
-netMix =NetUskip(ngf, nDep, nz, bSkip=opt.skipConnections, nc=3, ncIn=3, bTanh=True, Ubottleneck=opt.Ubottleneck)
+netMix =NetED(ngf, nDep, nz, nc=3, ncIn=3, bTanh=True, Ubottleneck=opt.zGL)
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print ("device",device)
 
@@ -99,7 +99,7 @@ optimizerD = optim.Adam(netD.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))#
 optimizerU = optim.Adam([param for net in Gnets for param in list(net.parameters())], lr=opt.lr, betas=(opt.beta1, 0.999))
 
 def ganGeneration(content, noise,templates=None, bVis = False):
-    x = netMix(content,noise)
+    x = netMix.d(noise)
     if bVis:
         return x,0,0,0
     return x
@@ -151,7 +151,10 @@ for epoch in range(opt.niter):
         output = netD(fake)
         loss_adv = criterion(output, output.detach()*0+real_label)
         D_G_z2 = output.mean()
-        cLoss= contentLoss(fake,content[:,:3],netR,opt)
+
+        noise[:,:opt.zGL]= netMix.e(content)
+        fake2 = ganGeneration(content, noise)##TODO freeze gradient of decode?
+        cLoss= contentLoss(fake2,content[:,:3],netR,opt)
 
         errG = loss_adv +opt.fContent*cLoss
         errG.backward()
@@ -164,13 +167,14 @@ for epoch in range(opt.niter):
         buf += [[D_x.item(), D_G_z1.item(), D_G_z2.item(),cLoss.item()]]
 
         ### RUN INFERENCE AND SAVE LARGE OUTPUT MOSAICS
-        if i == 1:
+        if i % 100 == 0:
             a=np.array(buf)
             plotStats(a,opt.outputFolder+desc)
             vutils.save_image(text,    '%s/real_textures.jpg' % opt.outputFolder,  normalize=True)
-            vutils.save_image(torch.cat([content,fake],2),'%s/mosaic_epoch_%03d_%s.jpg' % (opt.outputFolder, epoch,desc),normalize=True)
+            vutils.save_image(torch.cat([content,fake,fake2],2),'%s/mosaic_epoch_%03d_%s.jpg' % (opt.outputFolder, epoch,desc),normalize=True)
 
             fixnoise=setNoise(fixnoise)
+            fixnoise[:,:opt.zGL]=netMix.e(targetMosaic)
 
             vutils.save_image(fixnoise.view(-1,1,fixnoise.shape[2],fixnoise.shape[3]), '%s/noiseBig_epoch_%03d_%s.jpg' % (opt.outputFolder, epoch, desc),normalize=True)
 
@@ -185,35 +189,16 @@ for epoch in range(opt.niter):
 
 
             ##RUN OUT-OF-SAMPLE
-            VIDEO_SAVE_FREQ = 10
             with torch.no_grad():
-                import os
-                t0 = time.time()
                 try:
-                    try:
-                        files = os.listdir(opt.testImage)
-                        os.makedirs(opt.outputFolder+"video/")
-                    except:
-                        pass
-                    for f in files:
-                        if not epoch%VIDEO_SAVE_FREQ==0:
-                            break
-                        im=getImage(opt.testImage+f, bDel=True)
-                        im = im.to(device)
-
-                        if f == files[0]:
-                            fixnoise2 = torch.FloatTensor(1, nz, im.shape[2] // 2 ** nDep, im.shape[3] // 2 ** nDep)
-                            fixnoise2 = fixnoise2.to(device)
-                            fixnoise2=setNoise(fixnoise2)
-                        else:##random drift
-                            if False:
-                                drift=(fixnoise2*1.0).uniform_(-1, 1)
-                                fixnoise2[:, opt.zGL:fixnoise2.shape[1]-opt.zPeriodic]+=0.05*drift[:, opt.zGL:fixnoise2.shape[1]-opt.zPeriodic]
-
-                        fakebig =ganGeneration(im, fixnoise2)
-                        print(f,"test image size", im.shape,"inference time", -t0+time.time())##ok. 2 ms on v100 :-)
-                        #fakebig,_,_,_= splitW(im, fixnoise2, None, ganGeneration)
-                        vutils.save_image(fakebig, '%s/video/%s' % (opt.outputFolder,f), normalize=True)
+                    im=getImage(opt.testImage, bDel=True)
+                    im = im.to(device)
+                    print("test image size", im.shape)
+                    fixnoise2 = torch.FloatTensor(1, nz, im.shape[2] // 2 ** nDep, im.shape[3] // 2 ** nDep)
+                    fixnoise2 = fixnoise2.to(device)
+                    noise=setNoise(fixnoise2)
+                    fakebig,_,_,_= splitW(im, fixnoise2, None, ganGeneration)
+                    vutils.save_image(fakebig, '%s/mosaicTransfer_epoch_%03d_%s.jpg' % (opt.outputFolder, epoch, desc), normalize=True)
                 except Exception as e:
                     print ("test image error",e)
             netMix.train()

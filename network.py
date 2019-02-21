@@ -48,7 +48,7 @@ class Discriminator(nn.Module):
                 nf = ndf*2**i
             layers+=[nn.Conv2d(of, nf, 5, 2, 2)]##needs input 161 #hmm, also worls loke this
             if i !=0 and i !=nDep-1:
-                if not opt.WGAN:
+                if True:#not opt.WGAN:
                     layers+=[norma(nf )]
 
             if i < nDep -1:
@@ -61,7 +61,9 @@ class Discriminator(nn.Module):
 
     def forward(self, input):
         output = self.main(input)
-        return output[:,:,1:-1,1:-1]
+        if opt.WGAN:
+            return output.mean(3).mean(2).unsqueeze(2).unsqueeze(3)
+        return output#[:,:,1:-1,1:-1]
 
 ##################################################
 class NetG(nn.Module):
@@ -94,6 +96,93 @@ class NetG(nn.Module):
 
     def forward(self, input):
         return self.G(input)
+
+########################
+
+class NetED(nn.Module):
+    # @param nc is output channels
+    # @param ncIn is input channels
+    # @param ngf is channels of first layer, doubled up after every stride operation, or halved after upsampling
+    # @param nDep is depth, both of decoder and of encoder
+    # @param nz is dimensionality of stochastic noise we add
+    # @param NCbot can optionally specify the bottleneck size explicitly
+    # @param bCopyIn copies the input channels at every decoder level -- special skip connections
+    # @param bSkip turns skip connections btw encoder and decoder off
+    # @param bTanh turns nonlinearity on and off
+    def __init__(self, ngf, nDep, nz=0, Ubottleneck=-1, nc=3, ncIn=None, bTanh=True, lessD=0,bCopyIn=False):
+        super(NetED, self).__init__()
+        self.nDep = nDep
+        self.eblocks = nn.ModuleList()
+        self.dblocks = nn.ModuleList()
+        self.bCopyIn = bCopyIn
+
+        if Ubottleneck <= 0:
+            Ubottleneck = ngf * 2 ** (nDep - 1)
+
+        if ncIn is None:
+            of = nc
+        else:
+            of = ncIn  ##in some cases not an RGB conditioning
+
+        of += bfirstNoise * nz
+        for i in range(self.nDep):
+            layers = []
+            if i == self.nDep - 1:
+                nf = Ubottleneck
+            else:
+                nf = ngf * 2 ** i
+
+            layers += [nn.Conv2d(of, nf, 5, 2, 2)]
+            if i != 0:
+                layers += [norma(nf)]
+            if i < self.nDep - 1:
+                layers += [nn.LeakyReLU(0.2, inplace=True)]
+            else:
+                layers += [nn.Tanh()]
+            of = nf
+            block = nn.Sequential(*layers)
+            self.eblocks += [block]
+
+        ##first nDep layers
+        of = nz
+        for i in range(nDep + lessD):
+            layers = []
+            if i == nDep - 1:
+                nf = nc
+            else:
+                nf = ngf * 2 ** (nDep - 2 - i)
+            for j in range(opt.nBlocks):
+                layers += [ResnetBlock(of, padding_type="zero", norm_layer=norma, use_dropout=False, use_bias=True)]
+
+            layers += [nn.Upsample(scale_factor=2, mode='nearest')]  # nearest is default anyway
+            layers += [nn.Conv2d(of, nf, 4 + 1, 1, 2)]
+            if i == nDep - 1:
+                if bTanh:
+                    layers += [nn.Tanh()]
+            else:
+                layers += [norma(nf)]
+                layers += [nn.ReLU(True)]
+            of = nf
+            block = nn.Sequential(*layers)
+            self.dblocks += [block]
+
+    ##encoder
+    def e(self,x):
+        for i in range(self.nDep):
+            x = self.eblocks[i].forward(x)
+        return x
+
+    def d(self,x):
+        for i in range(len(self.dblocks)):
+            x = self.dblocks[i].forward(x)
+        return x
+
+    def forward(self, input1, input2=None):
+        raise Exception
+
+
+########################
+
 
 class NetUskip(nn.Module):
     # @param nc is output channels

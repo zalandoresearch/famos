@@ -27,11 +27,14 @@ class TextureDataset(Dataset):
                 name =self.img_path + n
                 try:
                     img = Image.open(name)
-                    img = img.convert('RGB')##fixes truncation???
+                    try:
+                        img = img.convert('RGB')##fixes truncation???
+                    except:
+                        pass
                     if scale!=1:
                         img=img.resize((int(img.size[0]*scale),int(img.size[1]*scale)),PIL.Image.LANCZOS)
                 except Exception as e:
-                    print (e)
+                    print (e,name)
                     continue
 
                 self.X_train +=[img]
@@ -246,7 +249,7 @@ if opt.zPeriodic:
         def __init__(self):
             super(Waver, self).__init__()
             if opt.zGL >0:
-                K=20
+                K=50
                 layers=[nn.Conv2d(opt.zGL, K, 1)]
                 layers +=[nn.ReLU(True)]
                 layers += [nn.Conv2d(K,2*opt.zPeriodic, 1)]
@@ -255,7 +258,7 @@ if opt.zPeriodic:
                 self.learnedWN = nn.Parameter(torch.zeros(opt.zPeriodic * 2).uniform_(-1, 1).unsqueeze(-1).unsqueeze(-1).unsqueeze(0) * 0.2)
         def forward(self, c,GLZ=None):
             if opt.zGL > 0:
-                return (waveNumbers + self.learnedWN(GLZ)) * c
+                return (waveNumbers + 5*self.learnedWN(GLZ)) * c
 
             return (waveNumbers + self.learnedWN) * c
     learnedWN = Waver()
